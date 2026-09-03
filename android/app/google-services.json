@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "164237823299",
+    "project_id": "takse-call",
+    "storage_bucket": "takse-call.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:164237823299:android:a6e3bf1f9dba7b423833f6",
+        "android_client_info": {
+          "package_name": "com.callyzer.callyzer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATcNb1-l5iyUoWWlw-JR7wznrD9inWw-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
