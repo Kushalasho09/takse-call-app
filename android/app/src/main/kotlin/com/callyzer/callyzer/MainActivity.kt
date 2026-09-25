@@ -10,10 +10,58 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val SIM_CHANNEL = "com.callyzer.app/sim_info"
     private val AUTOMATION_CHANNEL = "com.callyzer.app/automation"
+    private val POST_CALL_CHANNEL = "com.callyzer.app/post_call"
     private val PREFS_NAME = "com.callyzer.automation_prefs"
+
+    private var postCallChannel: MethodChannel? = null
+    private var pendingPostCallData: Map<String, Any?>? = null
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        postCallChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, POST_CALL_CHANNEL)
+        postCallChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInitialCallData" -> {
+                    val data = pendingPostCallData
+                    pendingPostCallData = null
+                    result.success(data)
+                }
+                "checkOverlayPermission" -> {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        result.success(android.provider.Settings.canDrawOverlays(this))
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "requestOverlayPermission" -> {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        if (!android.provider.Settings.canDrawOverlays(this)) {
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                android.net.Uri.parse("package:$packageName")
+                            )
+                            startActivity(intent)
+                            result.success(true)
+                        } else {
+                            result.success(true)
+                        }
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "showNativeOverlay" -> {
+                    val phone = call.argument<String>("phoneNumber") ?: ""
+                    val callType = call.argument<String>("callType") ?: "outgoing"
+                    val duration = call.argument<Int>("durationSeconds") ?: 0
+                    PostCallOverlayService.start(applicationContext, phone, callType, duration)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        handleIntentForPostCall(intent)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SIM_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "getSimCards") {
@@ -95,5 +143,39 @@ class MainActivity : FlutterActivity() {
             e.printStackTrace()
         }
         return simList
+    }
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+        handleIntentForPostCall(intent)
+    }
+
+    private fun handleIntentForPostCall(intent: android.content.Intent?) {
+        if (intent?.getStringExtra("action") == "SHOW_POST_CALL_DIALOG") {
+            val phone = intent.getStringExtra("phoneNumber") ?: ""
+            val type = intent.getStringExtra("callType") ?: "outgoing"
+            if (phone.isEmpty()) return
+            val map = mapOf("phoneNumber" to phone, "callType" to type)
+            if (postCallChannel != null) {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    postCallChannel?.invokeMethod("onCallEnded", map)
+                }, 350)
+            } else {
+                pendingPostCallData = map
+            }
+        }
     }
 }

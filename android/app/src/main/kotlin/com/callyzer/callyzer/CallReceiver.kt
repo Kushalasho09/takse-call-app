@@ -29,6 +29,16 @@ class CallReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_NEW_OUTGOING_CALL) {
+            val dialedNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
+            if (!dialedNumber.isNullOrEmpty()) {
+                savedNumber = dialedNumber
+                isIncoming = false
+                Log.d(TAG, "NEW_OUTGOING_CALL dialed: $savedNumber")
+            }
+            return
+        }
+
         if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
             val stateStr = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
             val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
@@ -58,9 +68,18 @@ class CallReceiver : BroadcastReceiver() {
                 if (isIncoming) {
                     wasAnswered = true
                     Log.d(TAG, "Incoming call answered")
+                } else {
+                    Log.d(TAG, "Outgoing call placed")
                 }
             }
             TelephonyManager.EXTRA_STATE_IDLE -> {
+                val callNumber = savedNumber ?: number ?: ""
+                val callType = if (isIncoming) {
+                    if (!wasAnswered) "missed" else "incoming"
+                } else {
+                    "outgoing"
+                }
+
                 if (isIncoming) {
                     if (!wasAnswered) {
                         Log.d(TAG, "Call CUT / DECLINED / MISSED from: $savedNumber")
@@ -70,13 +89,79 @@ class CallReceiver : BroadcastReceiver() {
                     } else {
                         Log.d(TAG, "Call ended after answer")
                     }
-                    isIncoming = false
-                    wasAnswered = false
+                } else {
+                    Log.d(TAG, "Outgoing call ended")
                 }
+
+                // If callNumber is detected from intent, trigger immediately
+                if (callNumber.isNotEmpty()) {
+                    triggerPostCallDialog(context, callNumber, callType)
+                } else {
+                    // Modern Android outgoing call privacy fallback: query CallLog after brief OS write delay
+                    val pendingType = callType
+                    val pendingResult = goAsync()
+                    val appContext = context.applicationContext
+                    Thread {
+                        try {
+                            Thread.sleep(450)
+                            val lastNumber = getLastCallNumber(appContext)
+                            Log.d(TAG, "Retrieved last call number from CallLog fallback: $lastNumber")
+                            if (lastNumber.isNotEmpty()) {
+                                triggerPostCallDialog(appContext, lastNumber, pendingType)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error in CallReceiver async fallback: ${e.message}")
+                        } finally {
+                            pendingResult.finish()
+                        }
+                    }.start()
+                }
+
+                isIncoming = false
+                wasAnswered = false
+                savedNumber = null
             }
         }
 
         lastState = stateStr
+    }
+
+    private fun getLastCallNumber(context: Context): String {
+        try {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.READ_CALL_LOG
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                val cursor = context.contentResolver.query(
+                    android.provider.CallLog.Calls.CONTENT_URI,
+                    arrayOf(android.provider.CallLog.Calls.NUMBER),
+                    null,
+                    null,
+                    "${android.provider.CallLog.Calls.DATE} DESC"
+                )
+                cursor?.use {
+                    if (it.moveToFirst()) {
+                        val num = it.getString(it.getColumnIndexOrThrow(android.provider.CallLog.Calls.NUMBER))
+                        if (!num.isNullOrEmpty()) {
+                            return num
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying CallLog for last call: ${e.message}")
+        }
+        return ""
+    }
+
+    private fun triggerPostCallDialog(context: Context, phoneNumber: String, callType: String) {
+        try {
+            Log.d(TAG, "Triggering PostCallOverlayService for $phoneNumber ($callType)")
+            PostCallOverlayService.start(context.applicationContext, phoneNumber, callType)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error triggering post call overlay: ${e.message}", e)
+        }
     }
 
     private fun triggerAutomatedActions(context: Context, incomingNumber: String) {

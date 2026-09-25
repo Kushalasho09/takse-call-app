@@ -219,6 +219,58 @@ class CallLogsView extends GetView<CallLogsController> {
               ),
             ),
 
+            // Display Over Other Apps Permission Banner
+            Obx(() {
+              if (controller.hasOverlayPermission.value) return const SizedBox.shrink();
+              return Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E2638),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF1976D2).withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.layers_outlined, color: Color(0xFF2196F3), size: 26),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Display Over Other Apps',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Show Lead Status dialog immediately when call ends on system dialer.',
+                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1976D2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => controller.requestOverlayPermission(),
+                      child: const Text('Enable', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
             // Top Filter Tabs with icons and white dot indicator (Horizontally Scrollable)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -527,6 +579,15 @@ class _CallLogCardItem extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
+                IconButton(
+                  onPressed: () => Get.find<CallLogsController>().openLeadStatusDialog(item),
+                  tooltip: 'Update Lead Status',
+                  icon: const Icon(
+                    Icons.flag_circle_rounded,
+                    size: 24,
+                    color: Color(0xFFF59E0B),
+                  ),
+                ),
                 IconButton(
                   onPressed: () => Get.find<CallLogsController>().addContact(context, item.name, item.number),
                   tooltip: 'Add Contact',

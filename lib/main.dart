@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'firebase_options.dart';
 import 'features/routes/app_pages.dart';
+import 'services/post_call_monitor_service.dart';
 import 'services/prefs_service.dart';
 import 'services/session_manager.dart';
 import 'utils/app_theme.dart';
@@ -22,6 +23,7 @@ void main() async {
   // Initialize App Services
   await PrefsService.init();
   SessionManager.init();
+  PostCallMonitorService.init();
 
   runApp(const TaskCallApp());
 }

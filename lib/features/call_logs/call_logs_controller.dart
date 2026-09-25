@@ -6,13 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/call_log_model.dart';
 import '../../services/call_log_service.dart';
 import '../../services/cloud_sync_service.dart';
+import '../../services/post_call_monitor_service.dart';
 import '../../utils/add_contact_bottom_sheet.dart';
 
 import '../../models/sim_card_model.dart';
 import '../../services/sim_card_service.dart';
 import '../../services/prefs_service.dart';
 
-class CallLogsController extends GetxController {
+class CallLogsController extends GetxController with WidgetsBindingObserver {
   final allLogs = <CallLogItem>[].obs;
   final filteredLogs = <CallLogItem>[].obs;
   final displayedLogs = <CallLogItem>[].obs;
@@ -32,12 +33,33 @@ class CallLogsController extends GetxController {
   final currentPage = 1.obs;
   final isLoadingMore = false.obs;
   final hasMore = true.obs;
+  final hasOverlayPermission = true.obs;
 
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     scrollController.addListener(_onScroll);
     loadSimsAndLogs();
+    checkOverlayPermission();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      checkOverlayPermission();
+    }
+  }
+
+  Future<void> checkOverlayPermission() async {
+    final granted = await PostCallMonitorService.isOverlayPermissionGranted();
+    hasOverlayPermission.value = granted;
+  }
+
+  Future<void> requestOverlayPermission() async {
+    await PostCallMonitorService.requestOverlayPermission();
+    await Future.delayed(const Duration(milliseconds: 500));
+    await checkOverlayPermission();
   }
 
   Future<void> loadSimsAndLogs() async {
@@ -70,6 +92,7 @@ class CallLogsController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     scrollController.removeListener(_onScroll);
     scrollController.dispose();
     super.onClose();
@@ -199,6 +222,7 @@ class CallLogsController extends GetxController {
   }
 
   Future<void> makePhoneCall(String phone) async {
+    PostCallMonitorService.markOutgoingCall(phone);
     final Uri uri = Uri.parse('tel:$phone');
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -212,6 +236,15 @@ class CallLogsController extends GetxController {
         duration: const Duration(seconds: 2),
       );
     }
+  }
+
+  void openLeadStatusDialog(CallLogItem log) {
+    PostCallMonitorService.triggerPostCallDialog(
+      phoneNumber: log.number,
+      contactName: log.name,
+      callType: log.type.name,
+      durationSeconds: log.durationInSeconds,
+    );
   }
 
   Future<void> openWhatsApp(String phone) async {
