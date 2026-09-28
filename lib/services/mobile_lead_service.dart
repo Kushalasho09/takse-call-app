@@ -214,8 +214,19 @@ class MobileLeadService {
 
   /// Real-time stream of leads assigned to this employee / organization
   static Stream<List<MobileLeadModel>> streamMyLeads() {
+    final user = SessionManager.currentUser;
+    final code = user?.connectCode.isNotEmpty == true ? user!.connectCode : PrefsService.connectCode;
+
+    if (code.isEmpty) {
+      return Stream.value(<MobileLeadModel>[]);
+    }
+
+    final cleanCode = code.replaceAll('-', '');
+    final codes = {code, cleanCode}.toList();
+
     return _firestore
         .collection('leads')
+        .where('connectCode', whereIn: codes)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
