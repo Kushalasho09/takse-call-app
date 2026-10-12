@@ -94,7 +94,10 @@ class CloudSyncService {
 
         // 2. Fetch last sync timestamp and device record
         try {
-          final devDoc = await _firestore.collection('devices').doc(connectCode).get();
+          final phone = user?.phone ?? PrefsService.userPhone;
+          final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+          final deviceDocId = cleanPhone.isNotEmpty ? '${connectCode}_$cleanPhone' : connectCode;
+          final devDoc = await _firestore.collection('devices').doc(deviceDocId).get();
           if (devDoc.exists && devDoc.data()?['lastSyncAt'] is Timestamp) {
             lastSync = (devDoc.data()!['lastSyncAt'] as Timestamp).toDate();
           }
@@ -221,7 +224,9 @@ class CloudSyncService {
       }
 
       // 3. Update device document status in Firestore
-      final deviceRef = _firestore.collection('devices').doc(connectCode);
+      final cleanPhone = userPhone.replaceAll(RegExp(r'[^0-9]'), '');
+      final deviceDocId = cleanPhone.isNotEmpty ? '${connectCode}_$cleanPhone' : connectCode;
+      final deviceRef = _firestore.collection('devices').doc(deviceDocId);
       await deviceRef.set({
         'connectCode': connectCode,
         'userName': userName,

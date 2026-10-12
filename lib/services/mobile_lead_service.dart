@@ -80,8 +80,8 @@ class MobileLeadModel {
 
     return MobileLeadModel(
       id: doc.id,
-      name: data['name'] ?? data['phoneNumber'] ?? 'Lead',
-      phoneNumber: data['phoneNumber'] ?? '',
+      name: (data['name'] ?? data['customer_name'] ?? data['phoneNumber'] ?? 'Lead').toString(),
+      phoneNumber: (data['phoneNumber'] ?? data['mobile_number'] ?? data['phone'] ?? '').toString(),
       status: data['status'] ?? 'New Inflow',
       tags: (data['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       notes: data['notes'] ?? '',

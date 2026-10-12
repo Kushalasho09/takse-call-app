@@ -9,6 +9,8 @@ import '../routes/app_pages.dart';
 
 class LoginController extends GetxController {
   final connectCodeController = TextEditingController();
+  final employeeNameController = TextEditingController();
+  final employeePhoneController = TextEditingController();
   final phoneController = TextEditingController();
   final otpController = TextEditingController();
 
@@ -35,18 +37,39 @@ class LoginController extends GetxController {
       return;
     }
 
+    final enteredName = employeeNameController.text.trim();
+    final enteredPhone = employeePhoneController.text.trim();
+
+    if (enteredName.isEmpty) {
+      Get.snackbar(
+        'Agent Name Required',
+        'Please enter your name so your manager can identify this device',
+        backgroundColor: Colors.orange.shade800,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (enteredPhone.isEmpty || enteredPhone.replaceAll(RegExp(r'[^0-9]'), '').length < 8) {
+      Get.snackbar(
+        'SIM Number Required',
+        'Please enter the mobile number of your calling SIM',
+        backgroundColor: Colors.orange.shade800,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     isLoading.value = true;
     errorMessage.value = '';
 
     try {
       final firestore = FirebaseFirestore.instance;
       
-      String userName = 'Kushal Asodia';
-      String userPhone = '+91 96645 79043';
       String company = 'Takse Call Enterprise';
-      String role = 'Admin & Sales Lead';
+      String role = 'Sales Agent';
 
-      // 1. Check in Firestore 'devices' collection (check both raw and formatted code)
+      // 1. Check in Firestore 'devices' or 'users' collection to retrieve Company Name
       var deviceDoc = await firestore.collection('devices').doc(rawCode).get();
       if (!deviceDoc.exists && !rawCode.contains('-') && rawCode.length >= 11) {
         // Try formatted code with dashes: e.g. KAS-4257-4648
@@ -57,10 +80,7 @@ class LoginController extends GetxController {
 
       if (deviceDoc.exists && deviceDoc.data() != null) {
         final data = deviceDoc.data()!;
-        userName = data['userName'] ?? data['name'] ?? userName;
-        userPhone = data['userPhone'] ?? data['phone'] ?? userPhone;
         company = data['companyName'] ?? company;
-        role = data['role'] ?? role;
       } else {
         // 2. Check in 'users' collection by connectCode
         final userQuery = await firestore
@@ -71,25 +91,19 @@ class LoginController extends GetxController {
 
         if (userQuery.docs.isNotEmpty) {
           final uData = userQuery.docs.first.data();
-          userName = uData['name'] ?? userName;
-          userPhone = uData['phone'] ?? userPhone;
           company = uData['companyName'] ?? company;
-          role = uData['role'] ?? role;
-        } else {
-          // Parse from prefix (e.g. KAS -> Kushal Asodia, ROH -> Rohan Sharma)
-          final prefix = rawCode.split('-').first;
-          if (prefix == 'KAS' || prefix == 'KUS') {
-            userName = 'Kushal Asodia';
-          } else if (prefix == 'ROH') {
-            userName = 'Rohan Sharma';
-          }
         }
       }
 
+      final userName = enteredName;
+      final userPhone = enteredPhone;
+      final cleanPhone = userPhone.replaceAll(RegExp(r'[^0-9]'), '');
+      final deviceDocId = cleanPhone.isNotEmpty ? '${rawCode}_$cleanPhone' : rawCode;
+
       final now = FieldValue.serverTimestamp();
 
-      // 3. Persist / Update device session in Firestore collection 'devices'
-      await firestore.collection('devices').doc(rawCode).set({
+      // 3. Persist / Update device session in Firestore collection 'devices' with unique doc ID per employee
+      await firestore.collection('devices').doc(deviceDocId).set({
         'connectCode': rawCode,
         'userName': userName,
         'userPhone': userPhone,
@@ -105,7 +119,7 @@ class LoginController extends GetxController {
 
       // 4. Save session locally
       final user = UserModel(
-        id: 'usr_$rawCode',
+        id: 'usr_${rawCode}_$cleanPhone',
         name: userName,
         email: '${userName.toLowerCase().replaceAll(' ', '.')}@taksecall.com',
         phone: userPhone,
@@ -125,7 +139,7 @@ class LoginController extends GetxController {
       // 6. Dynamic feedback snackbar displaying company name & user
       Get.snackbar(
         'Connected to $company! 🎉',
-        'Logged in as $userName ($role) • Code: $rawCode',
+        'Device paired for $userName ($userPhone)',
         backgroundColor: const Color(0xFF10B981),
         colorText: Colors.white,
         icon: const Icon(Icons.verified_user_rounded, color: Colors.white),
@@ -143,24 +157,8 @@ class LoginController extends GetxController {
       }
     } catch (e) {
       debugPrint('Device pairing notice: $e');
-      final user = UserModel.mock(connectCode: rawCode);
-      SessionManager.login(user);
-      PrefsService.setConnectCode(rawCode);
-      CloudSyncService.syncCallLogsToCloud();
-
-      Get.snackbar(
-        'Connected to ${user.companyName}! 🎉',
-        'Logged in as ${user.name} • Code: $rawCode',
-        backgroundColor: const Color(0xFF10B981),
-        colorText: Colors.white,
-        icon: const Icon(Icons.verified_user_rounded, color: Colors.white),
-        duration: const Duration(seconds: 4),
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-      );
-
-      Get.offAllNamed(AppRoutes.permissions);
+      errorMessage.value = 'Failed to connect: $e';
+      Get.snackbar('Connection Error', 'Failed to pair device: $e');
     } finally {
       isLoading.value = false;
     }
@@ -308,6 +306,8 @@ class LoginController extends GetxController {
   @override
   void onClose() {
     connectCodeController.dispose();
+    employeeNameController.dispose();
+    employeePhoneController.dispose();
     phoneController.dispose();
     otpController.dispose();
     super.onClose();

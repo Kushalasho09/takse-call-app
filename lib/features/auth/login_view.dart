@@ -201,6 +201,56 @@ class LoginView extends GetView<LoginController> {
 
                   const SizedBox(height: 16),
 
+                  // Agent Name Input
+                  const Text(
+                    'Agent / Employee Name',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller.employeeNameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Rahul Sharma',
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                      ),
+                      prefixIcon: const Icon(Icons.person_rounded, color: AppColors.accentOrange),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Calling SIM Mobile Number Input
+                  const Text(
+                    'Work SIM / Mobile Number',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller.employeePhoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 98765 43210',
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary.withValues(alpha: 0.5),
+                      ),
+                      prefixIcon: const Icon(Icons.phone_android_rounded, color: AppColors.accentOrange),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // Helper Callout Box
                   Container(
                     padding: const EdgeInsets.all(14),
@@ -216,7 +266,7 @@ class LoginView extends GetView<LoginController> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Your manager can find your device code at the top of their Takse Call Web Portal (e.g. ROH-3453-2342 or KUS-3926-0820).',
+                            'Enter your organization connect code (e.g. TES-XXXX-XXXX) provided by your manager to pair this device.',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary.withValues(alpha: 0.9),
@@ -228,7 +278,7 @@ class LoginView extends GetView<LoginController> {
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
 
                   // Connect Button
                   SizedBox(
