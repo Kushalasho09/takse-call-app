@@ -31,6 +31,8 @@ import '../permissions/notification_permission_controller.dart';
 import '../permissions/notification_permission_view.dart';
 import '../profile/profile_controller.dart';
 import '../profile/profile_view.dart';
+import '../sim_selection/work_sim_selection_controller.dart';
+import '../sim_selection/work_sim_selection_view.dart';
 import '../splash/splash_controller.dart';
 import '../splash/splash_view.dart';
 
@@ -165,6 +167,13 @@ class AppPages {
       name: AppRoutes.automationSettings,
       page: () => const AutomationSettingsView(),
     ),
+    GetPage(
+      name: AppRoutes.workSimSelection,
+      page: () => const WorkSimSelectionView(),
+      binding: BindingsBuilder(() {
+        Get.put(WorkSimSelectionController());
+      }),
+    ),
   ];
 }
 
@@ -189,4 +198,5 @@ abstract class AppRoutes {
   static const noSimCard = '/no-sim-card';
   static const profile = '/profile';
   static const automationSettings = '/automation-settings';
+  static const workSimSelection = '/work-sim-selection';
 }

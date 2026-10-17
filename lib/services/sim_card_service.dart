@@ -70,4 +70,17 @@ class SimCardService {
 
     return resultSims;
   }
+
+  /// Returns only physical/eSIM cards (excluding 'all'), useful for Work SIM setup
+  static Future<List<SimCardInfo>> getPhysicalSimCardsOnly() async {
+    final all = await getAvailableSimCards();
+    final physical = all.where((s) => s.id != 'all').toList();
+    if (physical.isEmpty) {
+      return [
+        const SimCardInfo(id: '1', name: 'SIM 1', carrierName: 'Primary SIM'),
+        const SimCardInfo(id: '2', name: 'SIM 2', carrierName: 'Secondary SIM'),
+      ];
+    }
+    return physical;
+  }
 }

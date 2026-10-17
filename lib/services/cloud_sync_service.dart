@@ -155,9 +155,14 @@ class CloudSyncService {
       final company = user?.companyName.isNotEmpty == true ? user!.companyName : PrefsService.companyName;
 
       // 1. Fetch latest call logs from device if not provided
-      final logs = providedLogs ?? await CallLogService.fetchCallLogsInBackground();
+      final allLogs = providedLogs ?? await CallLogService.fetchCallLogsInBackground();
+      
+      // Strict Work SIM Filtering: Only sync calls that occurred on the designated official company SIM.
+      // Calls from any Personal SIM are strictly excluded and never uploaded.
+      final logs = CallLogService.filterLogsByWorkSim(allLogs);
+      
       if (logs.isEmpty) {
-        debugPrint('⚠️ [CloudSync] No local call logs found to sync.');
+        debugPrint('⚠️ [CloudSync] No local call logs matching Work SIM (slot: ${PrefsService.workSimSlot}). Personal calls ignored.');
         _isSyncing = false;
         return 0;
       }
@@ -165,10 +170,10 @@ class CloudSyncService {
       state.value = state.value.copyWith(
         isSyncing: true,
         totalOnDevice: logs.length,
-        statusMessage: 'Preparing to sync ${logs.length} calls...',
+        statusMessage: 'Preparing to sync ${logs.length} work calls...',
       );
 
-      debugPrint('🚀 [CloudSync] Uploading all ${logs.length} call logs for device code: $connectCode ($userName)...');
+      debugPrint('🚀 [CloudSync] Uploading ${logs.length} official work calls (SIM slot: ${PrefsService.workSimSlot}) for: $connectCode ($userName)...');
 
       // 2. Batch write to Firestore in chunks of 400 (Firestore max is 500 per batch)
       const int chunkSize = 400;
@@ -234,6 +239,9 @@ class CloudSyncService {
         'companyName': company,
         'status': 'active',
         'deviceModel': 'Android Phone (Live Synced)',
+        'workSimSlot': PrefsService.workSimSlot,
+        'workSimName': PrefsService.workSimName,
+        'workSimCarrier': PrefsService.workSimCarrier,
         'lastSyncAt': now,
         'totalCallsCount': logs.length,
         'syncedCallsCount': logs.length,

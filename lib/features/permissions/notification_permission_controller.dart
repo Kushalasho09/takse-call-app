@@ -64,7 +64,11 @@ class NotificationPermissionController extends GetxController {
     if (!hasSim) {
       Get.offAllNamed(AppRoutes.noSimCard);
     } else if (SessionManager.isAuthenticated) {
-      Get.offAllNamed(AppRoutes.dashboard);
+      if (!PrefsService.isWorkSimConfigured) {
+        Get.offAllNamed(AppRoutes.workSimSelection);
+      } else {
+        Get.offAllNamed(AppRoutes.dashboard);
+      }
     } else {
       Get.offAllNamed(AppRoutes.login);
     }

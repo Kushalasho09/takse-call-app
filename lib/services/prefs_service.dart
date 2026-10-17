@@ -67,6 +67,22 @@ class PrefsService {
     await _prefs.setString('selected_sim_id', simId);
   }
 
+  /// Official Work SIM configuration for company tracking privacy
+  static String get workSimSlot => _prefs.getString('work_sim_slot') ?? '';
+  static String get workSimName => _prefs.getString('work_sim_name') ?? '';
+  static String get workSimCarrier => _prefs.getString('work_sim_carrier') ?? '';
+  static bool get isWorkSimConfigured => workSimSlot.isNotEmpty;
+
+  static Future<void> setWorkSim({
+    required String slot,
+    required String name,
+    required String carrier,
+  }) async {
+    await _prefs.setString('work_sim_slot', slot);
+    await _prefs.setString('work_sim_name', name);
+    await _prefs.setString('work_sim_carrier', carrier);
+  }
+
   static String? getCallNote(String key) {
     return _prefs.getString('call_note_$key');
   }

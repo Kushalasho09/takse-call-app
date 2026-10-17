@@ -152,6 +152,9 @@ class LoginController extends GetxController {
       // Check if permissions already granted
       if (!PrefsService.isCallLogPermissionGranted) {
         Get.offAllNamed(AppRoutes.permissions);
+      } else if (!PrefsService.isWorkSimConfigured) {
+        // Immediate initial step: Ask telecaller to pick their Official Company Work SIM
+        Get.offAllNamed(AppRoutes.workSimSelection);
       } else {
         Get.offAllNamed(AppRoutes.dashboard);
       }

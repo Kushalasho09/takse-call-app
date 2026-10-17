@@ -328,6 +328,31 @@ class _ProfileViewState extends State<ProfileView> {
               const SizedBox(height: 20),
 
               // Menu Option Items
+              // Official Company Work SIM Card
+              _buildMenuCard(
+                icon: Icons.sim_card_rounded,
+                title: 'Official Work SIM',
+                subtitle: PrefsService.workSimName.isNotEmpty
+                    ? '${PrefsService.workSimName} (${PrefsService.workSimCarrier}) • Private SIM Protected'
+                    : 'Select Company SIM (Personal SIM stays 100% private)',
+                badgeWidget: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    '🔒 PRIVATE',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                  ),
+                ),
+                onTap: () async {
+                  await Get.toNamed(AppRoutes.workSimSelection, arguments: {'fromSettings': true});
+                },
+              ),
+              const SizedBox(height: 12),
+
               _buildMenuCard(
                 icon: Icons.autorenew_rounded,
                 title: 'Call-Cut Automation Settings',
@@ -503,7 +528,13 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildMenuCard({required IconData icon, required String title, VoidCallback? onTap}) {
+  Widget _buildMenuCard({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? badgeWidget,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -536,13 +567,36 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      if (badgeWidget != null) ...[
+                        const SizedBox(width: 8),
+                        badgeWidget,
+                      ],
+                    ],
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const Icon(

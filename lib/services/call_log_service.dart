@@ -199,7 +199,19 @@ class CallLogService {
             String simId = '1';
             final phoneAccountId = (entry.phoneAccountId ?? '').toLowerCase();
             final simDisplayName = (entry.simDisplayName ?? '').toLowerCase();
-            if (phoneAccountId.contains('sim2') ||
+            if (phoneAccountId.contains('sim4') ||
+                phoneAccountId.contains('sub4') ||
+                phoneAccountId.contains('slot3') ||
+                simDisplayName.contains('sim 4') ||
+                simDisplayName.contains('sim4')) {
+              simId = '4';
+            } else if (phoneAccountId.contains('sim3') ||
+                phoneAccountId.contains('sub3') ||
+                phoneAccountId.contains('slot2') ||
+                simDisplayName.contains('sim 3') ||
+                simDisplayName.contains('sim3')) {
+              simId = '3';
+            } else if (phoneAccountId.contains('sim2') ||
                 phoneAccountId.contains('sub2') ||
                 phoneAccountId.contains('slot1') ||
                 simDisplayName.contains('sim 2') ||
@@ -424,5 +436,15 @@ class CallLogService {
       return CallTag.personal;
     }
     return CallTag.work;
+  }
+
+  /// Filters call records to strictly include only the designated Company Work SIM.
+  /// Calls made or received on the telecaller's personal SIM are completely excluded.
+  static List<CallLogItem> filterLogsByWorkSim(List<CallLogItem> logs) {
+    final workSim = PrefsService.workSimSlot;
+    if (workSim.isEmpty || workSim == 'all') {
+      return logs;
+    }
+    return logs.where((item) => item.simId == workSim).toList();
   }
 }
